@@ -20,14 +20,6 @@ def show_feed(request, user_id):
 
     # Google Firebase connection test
     fb = FirebaseConnection()
-    fb.db.child('test').set({"Hello": "World", "Hello2": "WOrld"})
-
-    results = {}
-    values = fb.db.child('test').get()
-    fields = ["Hello2", "a"]
-    for value in values.each():
-        for field in fields:
-            if field == value.key():
-                results[field] = value.val()
+    result = fb.db.child('test').set({"Hello": "World", "Hello2": "WOrld"})
 
     return HttpResponse("Activities: {0}".format(activities))

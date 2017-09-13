@@ -93,4 +93,5 @@ class UserManager(Manager):
     #     # removes the user's activities from the followers feeds
     #     self.remove_user_activity(user_id, activity)
 
+
 user_manager = UserManager()

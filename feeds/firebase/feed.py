@@ -6,8 +6,8 @@ from feeds.firebase.storage.timeline import FirebaseTimelineStorage
 
 
 class FirebaseFeed(BaseFeed):
-    timeline_storage_class = FirebaseTimelineStorage
     activity_storage_class = FirebaseActivityStorage
+    timeline_storage_class = FirebaseTimelineStorage
 
     activity_serializer = ActivitySerializer
 

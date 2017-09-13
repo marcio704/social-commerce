@@ -1,20 +1,21 @@
-from stream_framework.storage.base import BaseTimelineStorage
-from stream_framework.storage.redis.structures.sorted_set import RedisSortedSetCache
-from stream_framework.storage.redis.connection import get_redis_connection
-from stream_framework.utils.five import long_t
 import six
 
+from stream_framework.storage.base import BaseTimelineStorage
+from stream_framework.storage.redis.connection import get_redis_connection
+from stream_framework.utils.five import long_t
+
+from feeds.firebase.storage.sorted_set import FirebaseSortedSetCache
 
 
-class TimelineCache(RedisSortedSetCache):
+class TimelineCache(FirebaseSortedSetCache):
     sort_asc = False
 
 
 class FirebaseTimelineStorage(BaseTimelineStorage):
 
     def get_cache(self, key):
-        redis_server = self.options.get('redis_server', 'default')
-        cache = TimelineCache(key, redis_server=redis_server)
+        firebase_server = self.options.get('firebase_server', 'default')
+        cache = TimelineCache(key, firebase_server=firebase_server)
         return cache
 
     def contains(self, key, activity_id):

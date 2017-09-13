@@ -1,10 +1,11 @@
-from stream_framework.storage.base import BaseActivityStorage
-from stream_framework.storage.redis.structures.hash import ShardedHashCache
-from stream_framework.serializers.activity_serializer import ActivitySerializer
 import six
+from stream_framework.serializers.activity_serializer import ActivitySerializer
+from stream_framework.storage.base import BaseActivityStorage
+
+from feeds.firebase.storage.structures.hash import FirebaseHashCache
 
 
-class ActivityCache(ShardedHashCache):
+class ActivityCache(FirebaseHashCache):
     key_format = 'activity:cache:%s'
 
 
