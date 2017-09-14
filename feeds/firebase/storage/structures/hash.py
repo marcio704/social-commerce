@@ -79,8 +79,7 @@ class FirebaseHashCache(BaseFirebaseHashCache):
 
         for field, value in key_value_pairs:
             key = self.get_key(field)
-            logger.debug(
-                'writing hash(%s) field %s to %s', key, field, value)
+            logger.debug('writing hash(%s) field %s to %s', key, field, value)
             result = self.firebase.child(key).set({field: value})
             results.append(result)
         return results

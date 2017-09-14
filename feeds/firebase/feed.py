@@ -11,7 +11,7 @@ class FirebaseFeed(BaseFeed):
 
     activity_serializer = ActivitySerializer
 
-    # : allow you point to a different redis server as specified in
+    # : allow you point to a different firebase server as specified in
     # : settings.STREAM_REDIS_CONFIG
     firebase_server = 'default'
 

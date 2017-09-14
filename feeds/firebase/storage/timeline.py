@@ -23,6 +23,7 @@ class FirebaseTimelineStorage(BaseTimelineStorage):
         contains = cache.contains(activity_id)
         return contains
 
+    # TODO: Continue from here
     def get_slice_from_storage(self, key, start, stop, filter_kwargs=None, ordering_args=None):
         '''
         Returns a slice from the storage

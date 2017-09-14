@@ -26,21 +26,21 @@ class FirebaseSortedSetCache(BaseFirebaseListCache, BaseFirebaseHashCache):
         return lazy_object
 
     def index_of(self, value):
-        '''
+        """
         Returns the index of the given value
-        '''
-        # TODO: continue from here
-        if self.sort_asc:
-            redis_rank_fn = self.redis.zrank
-        else:
-            redis_rank_fn = self.redis.zrevrank
+        """
+        # TODO: select it ordered from Firebase
+        # if self.sort_asc:
+        #     redis_rank_fn = self.redis.zrank
+        # else:
+        #     redis_rank_fn = self.redis.zrevrank
         key = self.get_key()
-        result = redis_rank_fn(key, value)
+        result = self.firebase.child(key).get()
         if result:
-            result = int(result)
-        elif result is None:
-            raise ValueError(
-                'Couldnt find item with value %s in key %s' % (value, key))
+            result = list(result.keys()).index(value)
+        else:
+            raise ValueError('Couldnt find item with value %s in key %s' % (value, key))
+
         return result
 
     def add(self, score, key):
@@ -50,9 +50,11 @@ class FirebaseSortedSetCache(BaseFirebaseListCache, BaseFirebaseHashCache):
         return result
 
     def add_many(self, score_value_pairs):
-        '''
-        StrictRedis so it expects score1, name1
-        '''
+        """
+        It expects score1, name1
+        """
+        value_score_pairs = [tuple(reversed(i)) for i in score_value_pairs]
+
         key = self.get_key()
         scores = list(zip(*score_value_pairs))[0]
         msg_format = 'Please send floats as the first part of the pairs got %s'
@@ -61,93 +63,86 @@ class FirebaseSortedSetCache(BaseFirebaseListCache, BaseFirebaseHashCache):
             raise ValueError(msg_format % score_value_pairs)
         results = []
 
-        def _add_many(redis, score_value_pairs):
-            score_value_list = sum(map(list, score_value_pairs), [])
-            score_value_chunks = chunks(score_value_list, 200)
+        value_score_list = sum(map(list, value_score_pairs), [])
+        value_score_chunks = chunks(value_score_list, 200)
 
-            for score_value_chunk in score_value_chunks:
-                result = redis.zadd(key, *score_value_chunk)
-                logger.debug('adding to %s with score_value_chunk %s',
-                             key, score_value_chunk)
-                results.append(result)
-            return results
-
-        # start a new map redis or go with the given one
-        results = self._pipeline_if_needed(_add_many, score_value_pairs)
-
+        for value, score in value_score_chunks:
+            self.firebase.child(key).child(value).set(score)
+            logger.debug('adding to %s with value %s and score %s',
+                         key, value, score)
+            results.append(score)
         return results
 
     def remove_many(self, values):
-        '''
+        """
         values
-        '''
+        """
         key = self.get_key()
         results = []
 
-        def _remove_many(redis, values):
-            for value in values:
-                logger.debug('removing value %s from %s', value, key)
-                result = redis.zrem(key, value)
-                results.append(result)
-            return results
-
-        # start a new map redis or go with the given one
-        results = self._pipeline_if_needed(_remove_many, values)
-
+        for value in values:
+            logger.debug('removing value %s from %s', value, key)
+            result = len(self.firebase.child(key).child(value).shallow().get().pyres)
+            self.firebase.child(key).child(value).remove()
+            results.append(result)
         return results
 
     def remove_by_scores(self, scores):
         key = self.get_key()
+        nodes = self.firebase.child(key)
+        if not nodes:
+            return []
+
         results = []
+        for score in scores:
+            count = 0
+            for _value, _score in nodes:
+                if _score == score:
+                    self.firebase.child(key).child(_value).remove()
+                    count += 1
 
-        def _remove_many(redis, scores):
-            for score in scores:
-                logger.debug('removing score %s from %s', score, key)
-                result = redis.zremrangebyscore(key, score, score)
-                results.append(result)
-            return results
-
-        # start a new map redis or go with the given one
-        results = self._pipeline_if_needed(_remove_many, scores)
+            logger.debug('removing score %s from %s', score, key)
+            results.append(count)
 
         return results
 
     def contains(self, value):
-        '''
+        """
         Uses zscore to see if the given activity is present in our sorted set
-        '''
+        """
         key = self.get_key()
-        result = self.redis.zscore(key, value)
-        activity_found = result is not None
+        result = self.firebase.child(key).child(value).get().pyres
+        activity_found = bool(result)
         return activity_found
 
-    def trim(self, max_length=None):
-        '''
-        Trim the sorted set to max length
-        zremrangebyscore
-        '''
-        key = self.get_key()
-        if max_length is None:
-            max_length = self.max_length
-
-        # map things to the funny redis syntax
-        if self.sort_asc:
-            begin = max_length
-            end = -1
-        else:
-            begin = 0
-            end = (max_length * -1) - 1
-
-        removed = self.redis.zremrangebyrank(key, begin, end)
-        logger.info('cleaning up the sorted set %s to a max of %s items' %
-                    (key, max_length))
-        return removed
+    # TODO: function not rewrited
+    # def trim(self, max_length=None):
+    #     """
+    #     Trim the sorted set to max length
+    #     zremrangebyscore
+    #     """
+    #     key = self.get_key()
+    #     if max_length is None:
+    #         max_length = self.max_length
+    #
+    #     # map things to the funny redis syntax
+    #     if self.sort_asc:
+    #         begin = max_length
+    #         end = -1
+    #     else:
+    #         begin = 0
+    #         end = (max_length * -1) - 1
+    #
+    #     removed = self.redis.zremrangebyrank(key, begin, end)
+    #     logger.info('cleaning up the sorted set %s to a max of %s items' %
+    #                 (key, max_length))
+    #     return removed
 
     def get_results(self, start=None, stop=None, min_score=None, max_score=None):
-        '''
+        """
         Retrieve results from redis using zrevrange
         O(log(N)+M) with N being the number of elements in the sorted set and M the number of elements returned.
-        '''
+        """
         if self.sort_asc:
             redis_range_fn = self.redis.zrangebyscore
         else:
@@ -166,21 +161,23 @@ class FirebaseSortedSetCache(BaseFirebaseListCache, BaseFirebaseHashCache):
             limit = -1
 
         key = self.get_key()
+        results = self.firebase.child(key).get()
 
+        # TODO: Try to rewrite something like redis
         # some type validations
-        if min_score and not isinstance(min_score, (float, str, six.integer_types)):
-            raise ValueError(
-                'min_score is not of type float, int, long or str got %s' % min_score)
-        if max_score and not isinstance(max_score, (float, str, six.integer_types)):
-            raise ValueError(
-                'max_score is not of type float, int, long or str got %s' % max_score)
-
-        if min_score is None:
-            min_score = '-inf'
-        if max_score is None:
-            max_score = '+inf'
-
-        # handle the starting score support
-        results = redis_range_fn(
-            key, start=start, num=limit, withscores=True, min=min_score, max=max_score)
+        # if min_score and not isinstance(min_score, (float, str, six.integer_types)):
+        #     raise ValueError(
+        #         'min_score is not of type float, int, long or str got %s' % min_score)
+        # if max_score and not isinstance(max_score, (float, str, six.integer_types)):
+        #     raise ValueError(
+        #         'max_score is not of type float, int, long or str got %s' % max_score)
+        #
+        # if min_score is None:
+        #     min_score = '-inf'
+        # if max_score is None:
+        #     max_score = '+inf'
+        #
+        # # handle the starting score support
+        # results = redis_range_fn(
+        #     key, start=start, num=limit, withscores=True, min=min_score, max=max_score)
         return results
