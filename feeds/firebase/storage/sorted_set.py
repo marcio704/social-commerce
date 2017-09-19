@@ -67,7 +67,7 @@ class FirebaseSortedSetCache(BaseFirebaseListCache, BaseFirebaseHashCache):
         value_score_chunks = chunks(value_score_list, 200)
 
         for value, score in value_score_chunks:
-            self.firebase.child(key).child(value).set(score)
+            self.firebase.child(key).child(str(value)).set({"score": str(score)})
             logger.debug('adding to %s with value %s and score %s',
                          key, value, score)
             results.append(score)
@@ -116,12 +116,13 @@ class FirebaseSortedSetCache(BaseFirebaseListCache, BaseFirebaseHashCache):
         return activity_found
 
     # TODO: function not rewrited
-    # def trim(self, max_length=None):
-    #     """
-    #     Trim the sorted set to max length
-    #     zremrangebyscore
-    #     """
-    #     key = self.get_key()
+    def trim(self, max_length=None):
+        """
+        Trim the sorted set to max length
+        zremrangebyscore
+        """
+        key = self.get_key()
+        pass
     #     if max_length is None:
     #         max_length = self.max_length
     #
@@ -143,10 +144,10 @@ class FirebaseSortedSetCache(BaseFirebaseListCache, BaseFirebaseHashCache):
         Retrieve results from redis using zrevrange
         O(log(N)+M) with N being the number of elements in the sorted set and M the number of elements returned.
         """
-        if self.sort_asc:
-            redis_range_fn = self.redis.zrangebyscore
-        else:
-            redis_range_fn = self.redis.zrevrangebyscore
+        # if self.sort_asc:
+        #     redis_range_fn = self.redis.zrangebyscore
+        # else:
+        #     redis_range_fn = self.redis.zrevrangebyscore
 
         # -1 means infinity
         if stop is None:
@@ -161,7 +162,7 @@ class FirebaseSortedSetCache(BaseFirebaseListCache, BaseFirebaseHashCache):
             limit = -1
 
         key = self.get_key()
-        results = self.firebase.child(key).get()
+        results = self.firebase.child(key).get().val()
 
         # TODO: Try to rewrite something like redis
         # some type validations

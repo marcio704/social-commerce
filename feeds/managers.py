@@ -1,18 +1,23 @@
-from feeds.base import Manager, FanoutPriority
+from django.conf import settings
 
-from feeds.feeds import NormalUserFeed, UserFeed, AggregatedUserFeed
+from feeds.base import Manager, FanoutPriority
+from feeds.feeds import NormalUserFeed, UserFeed, AggregatedUserFeed,\
+    FirebaseNormalUserFeed, FirebaseUserFeed, FirebaseAggregatedUserFeed
 from feeds.activities import get_activity
 from feeds.models import UserFollowUser
 from feeds.verbs import UserFollowUser as UserFollowUserVerb, UserFollowBrand,\
     UserFollowStore, UserAddPost, UserAddProduct
+from feeds.firebase.managers import FirebaseManager
+
+is_firebase = True
 
 
-class UserManager(Manager):
+class UserManager(FirebaseManager):
     feed_classes = dict(
-        normal=NormalUserFeed,
-        aggregated=AggregatedUserFeed,
+        normal=FirebaseNormalUserFeed if is_firebase else NormalUserFeed,
+        aggregated=FirebaseAggregatedUserFeed if is_firebase else AggregatedUserFeed,
     )
-    user_feed_class = UserFeed
+    user_feed_class = FirebaseUserFeed if is_firebase else UserFeed
 
     def get_user_follower_ids(self, user_id):
         """
@@ -31,10 +36,6 @@ class UserManager(Manager):
         :return:
         """
         activity = get_activity(user_id, target_user_id, UserFollowUserVerb)
-
-        feed = UserFeed(user_id)
-        feed.add_many([activity])
-        results = feed[:10]
 
         # Add user activity to the user feed, and starts the fanout
         self.add_user_activity(user_id, activity)

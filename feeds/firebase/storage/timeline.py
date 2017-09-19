@@ -1,10 +1,10 @@
 import six
 
 from stream_framework.storage.base import BaseTimelineStorage
-from stream_framework.storage.redis.connection import get_redis_connection
 from stream_framework.utils.five import long_t
 
 from feeds.firebase.storage.sorted_set import FirebaseSortedSetCache
+from feeds.firebase.storage.connection import get_firebase_connection
 
 
 class TimelineCache(FirebaseSortedSetCache):
@@ -23,9 +23,8 @@ class FirebaseTimelineStorage(BaseTimelineStorage):
         contains = cache.contains(activity_id)
         return contains
 
-    # TODO: Continue from here
     def get_slice_from_storage(self, key, start, stop, filter_kwargs=None, ordering_args=None):
-        '''
+        """
         Returns a slice from the storage
         :param key: the redis key at which the sorted set is located
         :param start: the start
@@ -35,7 +34,7 @@ class FirebaseTimelineStorage(BaseTimelineStorage):
 
         **Example**::
            get_slice_from_storage('feed:13', 0, 10, {activity_id__lte=10})
-        '''
+        """
         cache = self.get_cache(key)
 
         # parse the filter kwargs and translate them to min max
@@ -83,15 +82,13 @@ class FirebaseTimelineStorage(BaseTimelineStorage):
                 raise ValueError('Unrecognized order kwargs %s' % ordering_args)
 
         # get the actual results
-        key_score_pairs = cache.get_results(start, stop, **result_kwargs)
-        score_key_pairs = [(score, data) for data, score in key_score_pairs]
+        value_score_pairs = cache.get_results(start, stop, **result_kwargs)
+        score_key_pairs = [(score["score"], data) for data, score in value_score_pairs.items()] if value_score_pairs else []
 
         return score_key_pairs
 
     def get_batch_interface(self):
-        return get_redis_connection(
-            server_name=self.options.get('redis_server', 'default')
-        ).pipeline(transaction=False)
+        return get_firebase_connection()
 
     def get_index_of(self, key, activity_id):
         cache = self.get_cache(key)
@@ -126,4 +123,5 @@ class FirebaseTimelineStorage(BaseTimelineStorage):
 
     def trim(self, key, length, batch_interface=None):
         cache = self.get_cache(key)
-        cache.trim(length)
+        pass
+        # cache.trim(length)
