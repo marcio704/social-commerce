@@ -10,7 +10,7 @@ from feeds.verbs import UserFollowUser as UserFollowUserVerb, UserFollowBrand,\
 from feeds.firebase.managers import FirebaseManager
 
 
-# Put this as an environment variable on django settings when development is finished
+# TODO: Put this as an environment variable on django settings when development is finished
 is_firebase = True
 
 
