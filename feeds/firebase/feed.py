@@ -23,9 +23,9 @@ class FirebaseFeed(BaseFeed):
 
     @classmethod
     def get_timeline_storage_options(cls):
-        '''
+        """
         Returns the options for the timeline storage
-        '''
+        """
         options = super(FirebaseFeed, cls).get_timeline_storage_options()
         options['firebase_server'] = cls.firebase_server
         return options
@@ -40,6 +40,7 @@ class FirebaseAggregatedFeed(AggregatedFeed):
     activity_serializer = ActivitySerializer
     timeline_storage_class = FirebaseTimelineStorage
     activity_storage_class = FirebaseActivityStorage
+
     # TODO: continue from here
     def _update_from_diff(self, new, changed, deleted):
         """

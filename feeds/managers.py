@@ -9,6 +9,8 @@ from feeds.verbs import UserFollowUser as UserFollowUserVerb, UserFollowBrand,\
     UserFollowStore, UserAddPost, UserAddProduct
 from feeds.firebase.managers import FirebaseManager
 
+
+# Put this as an environment variable on django settings when development is finished
 is_firebase = True
 
 
